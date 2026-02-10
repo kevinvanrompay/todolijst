@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ToDo-lijst — MCFC</title>
+<style>
+  :root{
+    --mc-light:#c0e6fb;
+    --mc-mid:#6cabdd;
+    --mc-dark:#1c2c5b;
+    --card-bg:#ffffff;
+    --muted:#6b7280;
+    --radius:14px;
+  }
+  html,body{
+    height:100%; margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    background:linear-gradient(180deg,#bfe7fb 0%, #eaf6ff 60%);
+    color:#072038;
+  }
+  .wrap{max-width:980px;margin:20px auto;padding:16px}
+  h1{margin:0 0 6px;font-size:28px;color:var(--mc-dark)}
+  h2{margin:0 0 10px;color:var(--mc-dark)}
+  .lead{margin:0 0 18px;color:var(--muted)}
+  .card{
+    background:var(--card-bg);
+    border-radius:var(--radius);
+    padding:18px;
+    margin-bottom:18px;
+    box-shadow:0 8px 30px rgba(28,44,91,0.08);
+  }
+  .logo-wrap{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:84px;height:84px;border-radius:999px;overflow:hidden;
+    flex:0 0 84px;box-shadow:0 6px 18px rgba(28,44,91,0.12);
+    background:#fff;
+  }
+  .chip{
+    display:inline-block;padding:6px 10px;border-radius:999px;
+    background:#eef6fb;color:var(--mc-dark);font-weight:700;
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:720px){ .row{grid-template-columns:1fr} }
+
+  label{font-size:13px;color:var(--muted);display:block;margin:0 0 6px}
+  input, textarea, select{
+    width:100%; box-sizing:border-box;
+    padding:10px; border-radius:10px;
+    border:1px solid rgba(28,44,91,0.10);
+    font-size:15px;
+    background:white;
+  }
+  textarea{min-height:80px;resize:vertical}
+
+  .btn{
+    padding:10px 14px;border-radius:999px;border:none;
+    background:var(--mc-mid);color:white;font-weight:800;cursor:pointer;
+    box-shadow:0 6px 18px rgba(33,120,190,0.15);
+  }
+  .btn.secondary{
+    background:#eef6fb;color:var(--mc-dark);box-shadow:none;
+    border:1px solid rgba(28,44,91,0.06);
+  }
+  .btn.danger{background:#ef4444}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .right{margin-left:auto}
+
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+  th,td{padding:8px;border-bottom:1px solid #eef6fb;text-align:left;vertical-align:top}
+  th{background:linear-gradient(90deg,var(--mc-light),#fff);color:var(--mc-dark);font-weight:800}
+
+  .status-open{color:#b45309;font-weight:800}
+  .status-done{color:#15803d;font-weight:800}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#eef6fb;color:var(--mc-dark);font-weight:700}
+  .small{font-size:13px;color:var(--muted)}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+  .nowrap{white-space:nowrap}
+
+  /* Mobile-friendly action buttons */
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card logo-wrap">
+      <!-- upload logo in repo as: man_city_logo.png -->
+      <div class="logo">
+        <img src="man_city_logo.png" alt="Manchester City" style="width:100%;height:100%;object-fit:cover">
+      </div>
+      <div>
+        <h1>ToDo-lijst — MCFC</h1>
+        <p class="lead">Eenvoudige takenlijst met status, deadline en opvolging. Alles wordt lokaal bewaard in je browser.</p>
+      </div>
+      <div class="right">
+        <span class="chip" id="countChip">0 items</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1. Nieuw item toevoegen</h2>
+
+      <div class="row">
+        <div>
+          <label>Beschrijving</label>
+          <textarea id="desc" placeholder="Wat moet er gebeuren?"></textarea>
+        </div>
+        <div>
+          <label>Bespreken met</label>
+          <input id="discuss" type="text" placeholder="bv. Trainer, ouder, speler…">
+          <div style="height:10px"></div>
+          <label>Wachtend op feedback van</label>
+          <input id="waiting" type="text" placeholder="bv. Hotel, busfirma, club…">
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="row">
+        <div>
+          <label>Deadline (datum)</label>
+          <input id="deadline" type="date">
+        </div>
+        <div>
+          <label>Opvolgen door</label>
+          <input id="owner" type="text" placeholder="bv. Jij / naam verantwoordelijke">
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="toolbar">
+        <button class="btn" id="addBtn">Toevoegen</button>
+        <button class="btn secondary" id="clearFormBtn" type="button">Formulier leegmaken</button>
+        <span class="small" id="saveStatus"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <h2 style="margin:0">2. ToDo-lijst</h2>
+        <div class="right toolbar">
+          <label class="small" style="margin:0">Filter</label>
+          <select id="filter">
+            <option value="all">Alles</option>
+            <option value="open">Open</option>
+            <option value="done">Afgevinkt</option>
+          </select>
+          <button class="btn secondary" id="exportBtn">CSV export</button>
+          <button class="btn danger" id="clearAllBtn">Alles wissen</button>
+        </div>
+      </div>
+
+      <table aria-label="ToDo tabel">
+        <thead>
+          <tr>
+            <th class="nowrap">Status</th>
+            <th>Beschrijving</th>
+            <th class="nowrap">Deadline</th>
+            <th>Bespreken met</th>
+            <th>Wachtend op</th>
+            <th>Opvolgen door</th>
+            <th class="nowrap">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+
+      <p class="small">Tip: taken worden automatisch gesorteerd op deadline (dichtste eerst). Afgevinkte items komen onderaan.</p>
+    </div>
+  </div>
+
+<script>
+  const STORAGE_KEY = "mcfc_todo_v1";
+
+  let items = [];
+
+  function load() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) { items = []; return; }
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) items = parsed;
+      else items = [];
+    } catch { items = []; }
+  }
+
+  function save(msg="Opgeslagen ✔") {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    document.getElementById("saveStatus").textContent = msg;
+    setTimeout(()=> document.getElementById("saveStatus").textContent = "", 1200);
+    updateCount();
+  }
+
+  function updateCount() {
+    document.getElementById("countChip").textContent = `${items.length} item${items.length===1?'':'s'}`;
+  }
+
+  function byDeadline(a,b){
+    // Sort: open first, done last
+    if (a.done !== b.done) return a.done ? 1 : -1;
+
+    // Then by earliest deadline
+    const ad = a.deadline ? new Date(a.deadline) : null;
+    const bd = b.deadline ? new Date(b.deadline) : null;
+    if (!ad && !bd) return 0;
+    if (!ad) return 1;
+    if (!bd) return -1;
+    return ad - bd;
+  }
+
+  function render() {
+    const filter = document.getElementById("filter").value;
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+
+    const sorted = items.slice().sort(byDeadline);
+    const shown = sorted.filter(it => {
+      if (filter === "open") return !it.done;
+      if (filter === "done") return it.done;
+      return true;
+    });
+
+    if (shown.length === 0) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="7" class="small">Geen items om te tonen.</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    shown.forEach(it => {
+      const tr = document.createElement("tr");
+
+      const status = it.done
+        ? `<span class="status-done">✔ Afgevinkt</span>`
+        : `<span class="status-open">⏳ Open</span>`;
+
+      const deadline = it.deadline ? it.deadline : "";
+      const deadlinePill = it.deadline ? `<span class="pill">${it.deadline}</span>` : `<span class="small">—</span>`;
+
+      tr.innerHTML = `
+        <td class="nowrap">${status}</td>
+        <td>${escapeHtml(it.desc).replace(/\n/g,"<br>")}</td>
+        <td class="nowrap">${deadlinePill}</td>
+        <td>${escapeHtml(it.discuss || "—")}</td>
+        <td>${escapeHtml(it.waiting || "—")}</td>
+        <td>${escapeHtml(it.owner || "—")}</td>
+        <td class="nowrap">
+          <div class="actions">
+            <button class="btn secondary" data-action="toggle" data-id="${it.id}">
+              ${it.done ? "Heropen" : "Afvinken"}
+            </button>
+            <button class="btn danger" data-action="delete" data-id="${it.id}">Verwijder</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function addItem() {
+    const desc = document.getElementById("desc").value.trim();
+    const discuss = document.getElementById("discuss").value.trim();
+    const waiting = document.getElementById("waiting").value.trim();
+    const deadline = document.getElementById("deadline").value; // yyyy-mm-dd or ""
+    const owner = document.getElementById("owner").value.trim();
+
+    if (!desc) { alert("Vul minstens een beschrijving in."); return; }
+
+    const item = {
+      id: "t_" + Date.now().toString(36),
+      desc,
+      discuss,
+      waiting,
+      deadline,
+      owner,
+      done: false,
+      createdAt: new Date().toISOString()
+    };
+
+    items.push(item);
+    save("Item toegevoegd ✔");
+    clearForm();
+    render();
+  }
+
+  function clearForm() {
+    document.getElementById("desc").value = "";
+    document.getElementById("discuss").value = "";
+    document.getElementById("waiting").value = "";
+    document.getElementById("deadline").value = "";
+    document.getElementById("owner").value = "";
+  }
+
+  function toggleDone(id){
+    const it = items.find(x=>x.id===id);
+    if(!it) return;
+    it.done = !it.done;
+    save(it.done ? "Afgevinkt ✔" : "Heropend ✔");
+    render();
+  }
+
+  function deleteItem(id){
+    if(!confirm("Verwijderen?")) return;
+    items = items.filter(x=>x.id!==id);
+    save("Verwijderd ✔");
+    render();
+  }
+
+  function clearAll(){
+    if(!confirm("Alles wissen? Dit kan je niet ongedaan maken.")) return;
+    items = [];
+    save("Alles gewist ✔");
+    render();
+  }
+
+  function exportCSV(){
+    if(!items.length){ alert("Geen items om te exporteren."); return; }
+    const headers = ["Status","Beschrijving","Bespreken met","Wachtend op feedback van","Deadline","Opvolgen door","Aangemaakt"];
+    const rows = [headers];
+
+    items.slice().sort(byDeadline).forEach(it=>{
+      rows.push([
+        it.done ? "AFGEVINKT" : "OPEN",
+        it.desc,
+        it.discuss,
+        it.waiting,
+        it.deadline,
+        it.owner,
+        it.createdAt
+      ]);
+    });
+
+    const csv = rows.map(r => r.map(cell => {
+      const v = String(cell ?? "");
+      if (v.includes(";") || v.includes('"') || v.includes("\n")) return `"${v.replace(/"/g,'""')}"`;
+      return v;
+    }).join(";")).join("\n");
+
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "todo_mcfc.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // Events
+  document.getElementById("addBtn").addEventListener("click", addItem);
+  document.getElementById("clearFormBtn").addEventListener("click", clearForm);
+  document.getElementById("filter").addEventListener("change", render);
+  document.getElementById("exportBtn").addEventListener("click", exportCSV);
+  document.getElementById("clearAllBtn").addEventListener("click", clearAll);
+
+  document.getElementById("tbody").addEventListener("click", (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+    if(action==="toggle") toggleDone(id);
+    if(action==="delete") deleteItem(id);
+  });
+
+  // Init
+  load();
+  updateCount();
+  render();
+</script>
+</body>
+</html>
